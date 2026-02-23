@@ -1,6 +1,6 @@
 import { strict as assert } from "assert";
 import { test } from "node:test";
-import { mapSketch, todayUTC, loadData, saveData } from "./fetchViews.js";
+import { mapSketch, todayUTC, loadData, saveData, fetchAllSketches } from "./fetchViews.js";
 import { readFileSync, unlinkSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -42,4 +42,24 @@ test("saveData and loadData round-trip JSON", () => {
   } else {
     unlinkSync(DATA_FILE);
   }
+});
+
+test("fetchAllSketches sends browser-like headers to avoid 403", async (t) => {
+  const capturedOptions = [];
+
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    capturedOptions.push(options);
+    return {
+      ok: true,
+      json: async () => [], // empty page → loop exits immediately
+    };
+  });
+
+  await fetchAllSketches();
+
+  assert.ok(capturedOptions.length > 0, "fetch should have been called");
+  const headers = capturedOptions[0]?.headers ?? {};
+  assert.ok(headers["User-Agent"], "User-Agent header must be present");
+  assert.ok(headers["Accept"], "Accept header must be present");
+  assert.ok(headers["Referer"], "Referer header must be present");
 });

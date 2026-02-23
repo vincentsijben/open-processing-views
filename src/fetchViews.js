@@ -17,6 +17,15 @@ const API_BASE = "https://openprocessing.org/api";
 const PAGE_LIMIT = 10; // Number of sketches to request per page; increase if the API allows larger pages
 const DATA_FILE = join(__dirname, "..", "data", "views.json");
 
+// Headers that mimic a regular browser request. Without these the
+// OpenProcessing server returns 403 Forbidden for automated clients.
+const REQUEST_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  Accept: "application/json, text/plain, */*",
+  Referer: "https://openprocessing.org/",
+};
+
 /**
  * Fetches a single page of sketches for the given user.
  * @param {number} offset - Pagination offset.
@@ -24,7 +33,7 @@ const DATA_FILE = join(__dirname, "..", "data", "views.json");
  */
 async function fetchSketchPage(offset) {
   const url = `${API_BASE}/sketch?userID=${USER_ID}&limit=${PAGE_LIMIT}&offset=${offset}&isPublic=1`;
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: REQUEST_HEADERS });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} fetching ${url}`);
   }
