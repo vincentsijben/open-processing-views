@@ -1,0 +1,137 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  color: #111827;
+  background: #f9fafb;
+}
+
+main {
+  padding: 20px;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 8px 0;
+}
+
+#summary {
+  margin: 0 0 16px 0;
+  color: #4b5563;
+}
+
+#controls {
+  margin: 0 0 14px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+#controls label {
+  font-size: 13px;
+  color: #374151;
+}
+
+#sketch-filter {
+  min-width: 260px;
+  max-width: 540px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: white;
+  color: #111827;
+}
+
+#download-history,
+#clear-history {
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+#download-history {
+  background: #374151;
+}
+
+#clear-history {
+  background: #b91c1c;
+}
+
+#download-history:disabled,
+#clear-history:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#chart {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  overflow-x: auto;
+}
+
+#legend {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #374151;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 6px 12px;
+}
+
+.legend-item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legend-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.legend-link:hover {
+  text-decoration: underline;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-right: 8px;
+}
+
+.axis text {
+  fill: #374151;
+  font-size: 11px;
+}
+
+.axis path,
+.axis line {
+  stroke: #d1d5db;
+}
+
+.grid line {
+  stroke: #e5e7eb;
+}
+
+.grid path {
+  stroke: none;
+}
+
+#chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #111827;
+  color: white;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  opacity: 0;
+}

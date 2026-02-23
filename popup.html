@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenProcessing Views Scraper</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        margin: 0;
+        padding: 12px;
+        width: 340px;
+        color: #1f2937;
+      }
+
+      h1 {
+        font-size: 14px;
+        margin: 0 0 10px 0;
+      }
+
+      p {
+        margin: 0 0 10px 0;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      button {
+        width: 100%;
+        border: 0;
+        border-radius: 8px;
+        background: #111827;
+        color: white;
+        font-size: 13px;
+        padding: 10px 12px;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      #status {
+        margin-top: 10px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      #preview {
+        margin-top: 10px;
+        background: #f3f4f6;
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 11px;
+        max-height: 180px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>OpenProcessing Views Scraper</h1>
+    <p>Open your OpenProcessing sketch list page, then click the button below.</p>
+    <button id="capture">Capture current page</button>
+    <button id="graph" style="margin-top: 8px; background: #2563eb;">Open graph view</button>
+    <div id="status"></div>
+    <div id="stored" style="margin-top: 6px; font-size: 12px; color: #4b5563;"></div>
+    <pre id="preview"></pre>
+    <script src="popup.js"></script>
+  </body>
+</html>
