@@ -173,11 +173,15 @@ function populateFilterOptions() {
 
 function render() {
   const summaryEl = document.getElementById("summary");
+  const statsEl = document.getElementById("stats");
+  const breakdownEl = document.getElementById("new-views-breakdown");
   const chartEl = document.getElementById("chart");
   const legendEl = document.getElementById("legend");
 
   chartEl.innerHTML = "";
   legendEl.innerHTML = "";
+  statsEl.innerHTML = "";
+  breakdownEl.innerHTML = "";
 
   if (!state.normalizedHistory.length) {
     summaryEl.textContent = "No stored snapshots yet. Capture from the popup first.";
@@ -201,8 +205,197 @@ function render() {
     summaryEl.textContent = `${state.normalizedHistory.length} captures · ${selected.title} (#${selected.id})`;
   }
 
+  drawStats(statsEl, breakdownEl, series, state.normalizedHistory);
+
   drawLineChart(chartEl, series, state.normalizedHistory, state.timeLabels, state.selectedSketchId !== "all");
   drawLegend(legendEl, series);
+}
+
+function drawStats(container, breakdownEl, series, snapshots) {
+  const totals = snapshots.map((_, snapshotIndex) =>
+    series.reduce((sum, line) => sum + Number(line.points[snapshotIndex]?.views || 0), 0)
+  );
+  const latestSketchIncreases = computeLatestSketchIncreasesFromSeries(series);
+
+  const latestTotal = totals.length ? totals[totals.length - 1] : 0;
+  const previousTotal = totals.length > 1 ? totals[totals.length - 2] : null;
+  const latestDelta = previousTotal === null ? null : latestTotal - previousTotal;
+
+  container.appendChild(createStatChip(`Total views: ${latestTotal.toLocaleString()}`, "neutral"));
+
+  if (latestDelta === null) {
+    const firstCaptureAt = snapshots.length ? formatTimestampForLabel(snapshots[0]?.fetched_at || snapshots[0]?.date) : "";
+    drawLatestSketchIncreaseSummary(
+      breakdownEl,
+      `New views: waiting for next capture${firstCaptureAt ? ` (first capture ${firstCaptureAt})` : ""}`,
+      latestSketchIncreases,
+      false
+    );
+    return;
+  }
+
+  const latestCaptureTime = formatTimestampForLabel(snapshots[snapshots.length - 1]?.fetched_at || snapshots[snapshots.length - 1]?.date);
+
+  if (latestDelta > 0) {
+    const previousCaptureTime = formatTimestampForLabel(snapshots[snapshots.length - 2]?.fetched_at || snapshots[snapshots.length - 2]?.date);
+    const sinceWhen = previousCaptureTime ? ` since ${previousCaptureTime}` : "";
+    const capturedAt = latestCaptureTime ? ` (captured ${latestCaptureTime})` : "";
+    drawLatestSketchIncreaseSummary(
+      breakdownEl,
+      `New views: +${latestDelta.toLocaleString()}${sinceWhen}${capturedAt}`,
+      latestSketchIncreases,
+      true
+    );
+    return;
+  }
+
+  let lastIncreaseIndex = -1;
+  for (let index = totals.length - 1; index >= 1; index -= 1) {
+    if (totals[index] > totals[index - 1]) {
+      lastIncreaseIndex = index;
+      break;
+    }
+  }
+
+  if (lastIncreaseIndex === -1) {
+    drawLatestSketchIncreaseSummary(breakdownEl, "New views: none observed yet", latestSketchIncreases, false);
+    return;
+  }
+
+  const lastIncreaseBy = totals[lastIncreaseIndex] - totals[lastIncreaseIndex - 1];
+  const lastIncreaseAtRaw = snapshots[lastIncreaseIndex]?.fetched_at || snapshots[lastIncreaseIndex]?.date;
+  const lastIncreaseAt = formatTimestampForLabel(lastIncreaseAtRaw);
+  const relative = formatRelativeTime(lastIncreaseAtRaw);
+  const relativeLabel = relative ? ` (${relative})` : "";
+  const latestLabel = latestCaptureTime ? ` · latest capture ${latestCaptureTime}` : "";
+  drawLatestSketchIncreaseSummary(
+    breakdownEl,
+    `New views: none since ${lastIncreaseAt || "last increase"} (+${lastIncreaseBy.toLocaleString()})${relativeLabel}${latestLabel}`,
+    latestSketchIncreases,
+    false
+  );
+}
+
+function computeLatestSketchIncreasesFromSeries(series) {
+  const increases = [];
+
+  for (const line of series) {
+    if (!Array.isArray(line?.points) || line.points.length < 2) {
+      continue;
+    }
+
+    const latestViews = Number(line.points[line.points.length - 1]?.views || 0);
+    const previousViews = Number(line.points[line.points.length - 2]?.views || 0);
+    const delta = latestViews - previousViews;
+    if (delta > 0) {
+      increases.push({
+        id: Number(line.id),
+        title: String(line.title || `Sketch ${line.id}`),
+        url: String(line.url || ""),
+        delta,
+      });
+    }
+  }
+
+  return increases.sort((left, right) => right.delta - left.delta);
+}
+
+function drawLatestSketchIncreaseSummary(container, summaryText, increases, hasComparedSnapshot) {
+  container.innerHTML = "";
+
+  if (!summaryText) {
+    return;
+  }
+
+  container.appendChild(document.createTextNode(summaryText));
+
+  if (!hasComparedSnapshot) {
+    return;
+  }
+
+  if (!increases.length) {
+    return;
+  }
+
+  container.appendChild(document.createTextNode(" · sketches: "));
+
+  const limit = 6;
+  const visible = increases.slice(0, limit);
+  visible.forEach((item, index) => {
+    if (index > 0) {
+      container.appendChild(document.createTextNode(", "));
+    }
+
+    const label = `${item.title} (+${item.delta.toLocaleString()})`;
+    if (item.url) {
+      const link = document.createElement("a");
+      link.href = item.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "legend-link";
+      link.textContent = label;
+      container.appendChild(link);
+      return;
+    }
+
+    container.appendChild(document.createTextNode(label));
+  });
+
+  const remaining = increases.length - limit;
+  if (remaining > 0) {
+    container.appendChild(document.createTextNode(`, +${remaining} more`));
+  }
+}
+
+function createStatChip(text, variant = "neutral") {
+  const chip = document.createElement("span");
+  chip.className = `stat-chip ${variant}`;
+  chip.textContent = text;
+  return chip;
+}
+
+function formatTimestampForLabel(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatRelativeTime(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const elapsedMs = Date.now() - date.getTime();
+  if (elapsedMs < 0) {
+    return "just now";
+  }
+
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  if (elapsedMs < hourMs) {
+    const minutes = Math.max(1, Math.floor(elapsedMs / minuteMs));
+    return `${minutes} min ago`;
+  }
+
+  if (elapsedMs < dayMs) {
+    const hours = Math.floor(elapsedMs / hourMs);
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(elapsedMs / dayMs);
+  return `${days}d ago`;
 }
 
 function drawLineChart(container, series, snapshots, timeLabels, focusedSingleSeries) {

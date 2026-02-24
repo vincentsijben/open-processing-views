@@ -1,6 +1,8 @@
 const captureButton = document.getElementById("capture");
 const graphButton = document.getElementById("graph");
 const statusEl = document.getElementById("status");
+const statsEl = document.getElementById("stats");
+const breakdownEl = document.getElementById("new-views-breakdown");
 const storedEl = document.getElementById("stored");
 const previewEl = document.getElementById("preview");
 const STORAGE_KEY = "openprocessingViewHistory";
@@ -160,9 +162,210 @@ function appendSnapshot(history, snapshot) {
 async function refreshStoredCount() {
   const history = await loadSnapshotHistory();
   const latest = history[history.length - 1];
+
+  drawPopupStats(history);
+
   storedEl.textContent = latest
     ? `Stored snapshots: ${history.length} (latest: ${latest.fetched_at || latest.date})`
     : "Stored snapshots: 0";
+}
+
+function drawPopupStats(history) {
+  statsEl.innerHTML = "";
+  breakdownEl.textContent = "";
+
+  if (!history.length) {
+    statsEl.appendChild(createStatChip("Total views: 0"));
+    breakdownEl.textContent = "New views: waiting for captures";
+    return;
+  }
+
+  const totals = history.map((snapshot) =>
+    (Array.isArray(snapshot?.sketches) ? snapshot.sketches : []).reduce((sum, sketch) => sum + Number(sketch?.views || 0), 0)
+  );
+
+  const latestTotal = totals[totals.length - 1] || 0;
+  statsEl.appendChild(createStatChip(`Total views: ${latestTotal.toLocaleString()}`));
+
+  if (totals.length < 2) {
+    const firstAt = formatTimestampForLabel(history[0]?.fetched_at || history[0]?.date);
+    breakdownEl.textContent = `New views: waiting for next capture${firstAt ? ` (first ${firstAt})` : ""}`;
+    return;
+  }
+
+  const latestSnapshot = history[history.length - 1];
+  const previousSnapshot = history[history.length - 2];
+  const latestSketchIncreases = computeSketchIncreasesFromSnapshots(previousSnapshot, latestSnapshot);
+
+  const latestDelta = latestTotal - (totals[totals.length - 2] || 0);
+  if (latestDelta > 0) {
+    const sinceAt = formatTimestampForLabel(history[history.length - 2]?.fetched_at || history[history.length - 2]?.date);
+    const capturedAt = formatTimestampForLabel(history[history.length - 1]?.fetched_at || history[history.length - 1]?.date);
+    drawSketchIncreaseSummary(
+      breakdownEl,
+      `New views: +${latestDelta.toLocaleString()}${sinceAt ? ` since ${sinceAt}` : ""}${capturedAt ? ` (captured ${capturedAt})` : ""}`,
+      latestSketchIncreases
+    );
+    return;
+  }
+
+  let lastIncreaseIndex = -1;
+  for (let index = totals.length - 1; index >= 1; index -= 1) {
+    if (totals[index] > totals[index - 1]) {
+      lastIncreaseIndex = index;
+      break;
+    }
+  }
+
+  if (lastIncreaseIndex === -1) {
+    breakdownEl.textContent = "New views: none observed yet";
+    return;
+  }
+
+  const increaseBy = totals[lastIncreaseIndex] - totals[lastIncreaseIndex - 1];
+  const increaseAtRaw = history[lastIncreaseIndex]?.fetched_at || history[lastIncreaseIndex]?.date;
+  const increaseAt = formatTimestampForLabel(increaseAtRaw);
+  const relative = formatRelativeTime(increaseAtRaw);
+  breakdownEl.textContent = `New views: none since ${increaseAt || "last increase"} (+${increaseBy.toLocaleString()})${relative ? ` (${relative})` : ""}`;
+}
+
+function computeSketchIncreasesFromSnapshots(previousSnapshot, latestSnapshot) {
+  const previousById = new Map();
+  const previousSketches = Array.isArray(previousSnapshot?.sketches) ? previousSnapshot.sketches : [];
+  for (const sketch of previousSketches) {
+    const sketchId = Number(sketch?.id);
+    if (!Number.isFinite(sketchId)) {
+      continue;
+    }
+    previousById.set(sketchId, Number(sketch?.views || 0));
+  }
+
+  const increases = [];
+  const latestSketches = Array.isArray(latestSnapshot?.sketches) ? latestSnapshot.sketches : [];
+  for (const sketch of latestSketches) {
+    const sketchId = Number(sketch?.id);
+    if (!Number.isFinite(sketchId)) {
+      continue;
+    }
+
+    const latestViews = Number(sketch?.views || 0);
+    const previousViews = Number(previousById.get(sketchId) || 0);
+    const delta = latestViews - previousViews;
+    if (delta > 0) {
+      increases.push({
+        id: sketchId,
+        title: String(sketch?.title || `Sketch ${sketchId}`),
+        url: String(sketch?.url || ""),
+        delta,
+      });
+    }
+  }
+
+  return increases.sort((left, right) => right.delta - left.delta);
+}
+
+function drawSketchIncreaseSummary(container, summaryText, increases) {
+  container.innerHTML = "";
+
+  if (!summaryText) {
+    return;
+  }
+
+  container.appendChild(document.createTextNode(summaryText));
+
+  if (!increases.length) {
+    return;
+  }
+
+  const limit = 5;
+  const visible = increases.slice(0, limit);
+  container.appendChild(document.createTextNode(" · sketches: "));
+
+  visible.forEach((item, index) => {
+    if (index > 0) {
+      container.appendChild(document.createTextNode(", "));
+    }
+
+    const truncatedTitle = truncateLabel(item.title, 30);
+    const label = `${truncatedTitle} (+${item.delta.toLocaleString()})`;
+    if (item.url) {
+      const link = document.createElement("a");
+      link.href = item.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "inline-link";
+      link.title = item.title;
+      link.textContent = label;
+      container.appendChild(link);
+      return;
+    }
+
+    container.appendChild(document.createTextNode(label));
+  });
+
+  const remaining = increases.length - limit;
+  if (remaining > 0) {
+    container.appendChild(document.createTextNode(`, +${remaining} more`));
+  }
+}
+
+function truncateLabel(value, maxLength) {
+  const text = String(value || "").trim();
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+function createStatChip(text, positive = false) {
+  const chip = document.createElement("span");
+  chip.className = positive ? "stat-chip positive" : "stat-chip";
+  chip.textContent = text;
+  return chip;
+}
+
+function formatTimestampForLabel(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatRelativeTime(value) {
+  const date = new Date(value || "");
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const elapsedMs = Date.now() - date.getTime();
+  if (elapsedMs < 0) {
+    return "just now";
+  }
+
+  const minuteMs = 60 * 1000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  if (elapsedMs < hourMs) {
+    const minutes = Math.max(1, Math.floor(elapsedMs / minuteMs));
+    return `${minutes} min ago`;
+  }
+
+  if (elapsedMs < dayMs) {
+    const hours = Math.floor(elapsedMs / hourMs);
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(elapsedMs / dayMs);
+  return `${days}d ago`;
 }
 
 function scrapeOpenProcessingPage() {

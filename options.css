@@ -19,6 +19,40 @@ h1 {
   color: #4b5563;
 }
 
+#stats {
+  margin: -8px 0 16px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#new-views-breakdown {
+  margin: -8px 0 14px 0;
+  font-size: 12px;
+  color: #374151;
+}
+
+.stat-chip {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.stat-chip.positive {
+  border-color: #16a34a;
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.stat-chip.neutral {
+  border-color: #d1d5db;
+  color: #374151;
+  background: #f9fafb;
+}
+
 #controls {
   margin: 0 0 14px 0;
   display: flex;

@@ -46,6 +46,44 @@
         line-height: 1.4;
       }
 
+      #stats {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      #new-views-breakdown {
+        margin-top: 6px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: #374151;
+      }
+
+      .stat-chip {
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 11px;
+        color: #374151;
+        background: #f9fafb;
+      }
+
+      .stat-chip.positive {
+        border-color: #16a34a;
+        color: #166534;
+        background: #f0fdf4;
+      }
+
+      .inline-link {
+        color: #2563eb;
+        text-decoration: none;
+      }
+
+      .inline-link:hover {
+        text-decoration: underline;
+      }
+
       #preview {
         margin-top: 10px;
         background: #f3f4f6;
@@ -64,6 +102,8 @@
     <button id="capture">Capture current page</button>
     <button id="graph" style="margin-top: 8px; background: #2563eb;">Open graph view</button>
     <div id="status"></div>
+    <div id="stats" aria-live="polite"></div>
+    <div id="new-views-breakdown" aria-live="polite"></div>
     <div id="stored" style="margin-top: 6px; font-size: 12px; color: #4b5563;"></div>
     <pre id="preview"></pre>
     <script src="popup.js"></script>

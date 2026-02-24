@@ -16,8 +16,9 @@ This extension lets you manually scrape sketch view data from the OpenProcessing
 3. Click the extension icon.
 4. Click **Capture current page**.
 5. The full captured snapshot is shown in the popup preview pane and saved in `chrome.storage.local`.
-6. Click **Open graph view** to open the extension options page with a D3 line chart.
-7. In the options page, use **Download stored history** to export all captures and **Clear stored history** to reset saved data.
+6. The popup also shows **Total views** and a combined **New views** line with linked sketches and per-sketch increases.
+7. Click **Open graph view** to open the extension options page with a D3 line chart.
+8. In the options page, use **Download stored history** to export all captures and **Clear stored history** to reset saved data.
 
 Each capture is stored with its exact capture timestamp, so repeated captures on the same day are kept as separate history points.
 
@@ -30,6 +31,11 @@ The options page renders a D3 line graph where:
 - Each line = one sketch over time
 
 Use the **Filter sketch** dropdown to focus on one sketch quickly. In single-sketch mode, the Y-axis auto-zooms to a range near that sketch values for easier reading.
+
+Above the chart, the options page also shows:
+
+- **Total views** for the currently selected scope (all sketches or one sketch)
+- A combined **New views** line including whether the latest capture added views, the timestamp context, and linked sketch-by-sketch increases
 
 The legend below the chart lists each sketch with latest view count.
 
